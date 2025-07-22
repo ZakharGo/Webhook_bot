@@ -1,0 +1,64 @@
+package main
+
+import (
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+func main() {
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	if err != nil {
+		log.Panic(err)
+	}
+	certFile := "/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem"
+	certData, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		log.Panicf("Failed to read certificate: %v", err)
+	}
+
+	// 2. Создаем RequestFileData для сертификата
+	certReader := tgbotapi.FileBytes{
+		Name:  "certificate.pem",
+		Bytes: certData,
+	}
+
+	// Настройка вебхука
+	webhookURL := "https:realtor-bot.mooo.com:8443/" + bot.Token
+	wh, err := tgbotapi.NewWebhookWithCert(webhookURL, certReader)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = bot.Request(wh)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Получаем обновления через вебхук
+	updates := bot.ListenForWebhook("/" + bot.Token)
+	go func() {
+		err = http.ListenAndServeTLS(":8443",
+			"/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem",
+			"/etc/letsencrypt/live/realtor-bot.mooo.com/privkey.pem",
+			nil)
+		if err != nil {
+			log.Panic(err)
+		}
+	}()
+
+	for update := range updates {
+		if update.Message != nil {
+			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Echo: "+update.Message.Text)
+			_, err := bot.Send(msg)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+}
