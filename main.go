@@ -17,12 +17,12 @@ func main() {
 	}
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_TOKEN"))
 	if err != nil {
-		log.Panic(err)
+		log.Println(err.Error())
 	}
 	certFile := "/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem"
 	certData, err := ioutil.ReadFile(certFile)
 	if err != nil {
-		log.Panicf("Failed to read certificate: %v", err)
+		log.Println(err.Error())
 	}
 
 	// 2. Создаем RequestFileData для сертификата
@@ -35,12 +35,12 @@ func main() {
 	webhookURL := "https:realtor-bot.mooo.com:8443/" + bot.Token
 	wh, err := tgbotapi.NewWebhookWithCert(webhookURL, certReader)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err.Error())
 	}
 
 	_, err = bot.Request(wh)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err.Error())
 	}
 
 	// Получаем обновления через вебхук
@@ -51,7 +51,7 @@ func main() {
 			"/etc/letsencrypt/live/realtor-bot.mooo.com/privkey.pem",
 			nil)
 		if err != nil {
-			log.Panic(err)
+			log.Println(err.Error())
 		}
 	}()
 
