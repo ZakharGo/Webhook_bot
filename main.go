@@ -31,7 +31,7 @@ func main() {
 	}
 
 	// Настройка вебхука
-	webhookURL := "https:realtor-bot.mooo.com:8443/" + bot.Token
+	webhookURL := "https://realtor-bot.mooo.com:8443/realtor_bot" + bot.Token
 	wh, err := tgbotapi.NewWebhookWithCert(webhookURL, certReader)
 	if err != nil {
 		log.Println(err.Error())
