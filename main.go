@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/joho/godotenv"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,7 +19,7 @@ func main() {
 		log.Println(err.Error())
 	}
 	certFile := "/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem"
-	certData, err := ioutil.ReadFile(certFile)
+	certData, err := os.ReadFile(certFile)
 	if err != nil {
 		log.Println(err.Error())
 	}
