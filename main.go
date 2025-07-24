@@ -27,7 +27,7 @@ func main() {
 
 	// 2. Создаем RequestFileData для сертификата
 	certReader := tgbotapi.FileBytes{
-		Name:  "certificate.pem",
+		Name:  "cert.pem",
 		Bytes: certData,
 	}
 
