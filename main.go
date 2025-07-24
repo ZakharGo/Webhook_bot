@@ -1,68 +1,66 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func main() {
-	err := godotenv.Load()
+	bot, err := tgbotapi.NewBotAPI("7948439516:AAGHu5ITqmKNBnR_crFBXSyju_MczwTOGsQ")
 	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_TOKEN"))
-	if err != nil {
-		log.Println(err.Error())
-	}
-	certFile := "/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem"
-	certData, err := os.ReadFile(certFile)
-	if err != nil {
-		log.Println(err.Error())
+		log.Panic(err)
 	}
 
-	// 2. Создаем RequestFileData для сертификата
-	certReader := tgbotapi.FileBytes{
-		Name:  "cert.pem",
-		Bytes: certData,
-	}
+	bot.Debug = true
 
-	// Настройка вебхука
-	webhookURL := "https://realtor-bot.mooo.com:8443/" + bot.Token
-	wh, err := tgbotapi.NewWebhookWithCert(webhookURL, certReader)
+	// Установка webhook
+	wh, err := tgbotapi.NewWebhook("https://realtor-bot.mooo.com:8443/webhook")
 	if err != nil {
-		log.Println(err.Error())
+		log.Fatal(err)
 	}
 
 	_, err = bot.Request(wh)
 	if err != nil {
-		log.Println(err.Error())
+		log.Fatal(err)
 	}
 
-	// Получаем обновления через вебхук
-	updates := bot.ListenForWebhook("/" + bot.Token)
-	go func() {
-		err = http.ListenAndServeTLS(":8443",
-			"/etc/letsencrypt/live/realtor-bot.mooo.com/fullchain.pem",
-			"/etc/letsencrypt/live/realtor-bot.mooo.com/privkey.pem",
-			nil)
+	// HTTP сервер для обработки webhook
+	http.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		update, err := bot.HandleUpdate(r)
 		if err != nil {
-			log.Println(err.Error())
+			log.Println(err)
+			return
 		}
-	}()
 
-	for update := range updates {
+		// Обработка сообщения
 		if update.Message != nil {
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Echo: "+update.Message.Text)
-			_, err := bot.Send(msg)
-			if err != nil {
-				log.Println(err)
-			}
+			handleMessage(bot, update.Message)
 		}
+	})
+
+	go http.ListenAndServe(":8080", nil)
+	log.Println("Server started on :8080")
+
+	// Бесконечный цикл для поддержания работы программы
+	select {}
+}
+
+func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	msg := tgbotapi.NewMessage(message.Chat.ID, "")
+
+	switch message.Command() {
+	case "start":
+		msg.Text = "Привет! Я бот с webhook."
+	case "help":
+		msg.Text = "Доступные команды: /start, /help"
+	default:
+		msg.Text = "Неизвестная команда"
+	}
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Println(err)
 	}
 }
